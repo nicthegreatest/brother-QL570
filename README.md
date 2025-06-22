@@ -29,7 +29,7 @@ The system needs a unique way to identify the printer. Plug in the printer and t
 lsusb | grep Brother
 
 You will see a line similar to this:
-Bus 001 Device 008: ID 04f9:2028 Brother Industries, Ltd QL-570 Label Printer
+> Bus 001 Device 008: ID 04f9:2028 Brother Industries, Ltd QL-570 Label Printer
 
 The important part is the ID: 04f9:2028. The first part (04f9) is the idVendor, and the second (2028) is the idProduct. We will use these in the next step.
 
@@ -38,11 +38,11 @@ By default, Linux prevents normal users from directly accessing hardware for sec
 
 Create and open a new rule file with a text editor:
 
-sudo nano /etc/udev/rules.d/99-brother-ql-permissions.rules
+> sudo nano /etc/udev/rules.d/99-brother-ql-permissions.rules
 
 Copy the following line and paste it into the editor. Ensure you use the idVendor and idProduct you found in Step 3.
 
-SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2028", GROUP="lp", MODE="0664"
+> SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2028", GROUP="lp", MODE="0664"
 
 This rule tells the system: when a USB device with this specific vendor/product ID is connected, assign it to the lp group and set its mode to allow read/write access for the owner and the group.
 
@@ -51,9 +51,9 @@ Save the file and exit the editor (Ctrl+O, Enter, Ctrl+X in nano).
 ## Step 5: Add Your User to the lp Group
 Now that the device will belong to the lp group, you must add your user account to that group to gain access.
 
-sudo usermod -a -G lp <your_username>
+> sudo usermod -a -G lp <your_username>
 
-(Replace <your_username> with your actual username, e.g., nic).
+(Replace <your_username> with your actual username)
 
 ## Step 6: Apply Changes and Reboot
 To ensure all permission changes take full effect system-wide, the most reliable method is to perform a full reboot.
@@ -84,27 +84,85 @@ nano ~/print-label
 
 Paste the following code into the file:
 
+
+
+
 #!/bin/bash
 
-# Script to print an image to the Brother QL-570.
-# Usage: ./print-label /path/to/image.png
+# ==============================================================================
+# Automated Print-Label Script for Brother QL-570
+# Version: 2.0
+# Features:
+#   - Automatically detects and converts SVG files to print-ready PNGs.
+#   - Prints PNG files directly.
+#   - Uses a temporary file for conversions, which is cleaned up automatically.
+# ==============================================================================
 
+# --- Configuration ---
+# The vendor and product ID of your printer, found with `lsusb`.
+PRINTER_ID="04f9:2028" 
+# The pixel dimensions your printer expects for the label size.
+# For 62x100mm, this is 696x1109.
+LABEL_DIMENSIONS="696x1109"
+# The label code for the `brother_ql` tool.
+LABEL_SIZE_CODE="62x100"
+
+# --- Script Logic ---
+
+# 1. Check if a filename was provided as an argument.
 if [ -z "$1" ]; then
-  echo "Error: You must provide a path to an image file."
+  echo "Error: You must provide a path to an image file (PNG or SVG)."
+  echo "Usage: ./print-label <path_to_image>"
   exit 1
 fi
 
-# Use the vendor/product ID for your printer
-PRINTER_ID="04f9:2028"
+INPUT_FILE="$1"
+# This will be the final file that gets sent to the printer.
+FILE_TO_PRINT=""
 
-echo "Printing '$1'..."
-brother_ql --backend pyusb --model QL-570 --printer usb://$PRINTER_ID print -l 62x100 "$1"
+# 2. Create a temporary file that will be deleted when the script exits.
+# This is where the converted SVG will be stored.
+TEMP_PNG_FILE=$(mktemp /tmp/print-label-XXXXXX.png) 
+trap 'rm -f "$TEMP_PNG_FILE"' EXIT 
+
+# 3. Check if the input file is an SVG (case-insensitive check).
+if [[ "${INPUT_FILE,,}" == *.svg ]]; then
+  echo "SVG file detected. Converting to a print-ready PNG..."
+  
+  # Use ImageMagick's `magick` to handle the SVG.
+  # It resizes the SVG to fit, adds a white background, and sets the
+  # final canvas size to the exact dimensions the printer needs.
+  magick "$INPUT_FILE" -resize "$LABEL_DIMENSIONS" -background white -gravity center -extent "$LABEL_DIMENSIONS" "$TEMP_PNG_FILE"
+  
+  # Check if the conversion was successful.
+  if [ $? -ne 0 ]; then
+    echo "Error: ImageMagick SVG conversion failed."
+    exit 1
+  fi
+  
+  # Set the file to print to our newly created temporary PNG.
+  FILE_TO_PRINT="$TEMP_PNG_FILE"
+else
+  # If it's not an SVG, we assume it's already a print-ready PNG.
+  FILE_TO_PRINT="$INPUT_FILE"
+fi
+
+# 4. Print the final image file.
+echo "Sending '$FILE_TO_PRINT' to the printer..."
+brother_ql --backend pyusb --model QL-570 --printer "usb://$PRINTER_ID" print -l "$LABEL_SIZE_CODE" "$FILE_TO_PRINT"
+
+# The `trap` command will automatically delete the temporary file now.
 echo "Done."
+
+
+
+
+
 
 Save and exit (Ctrl+O, Enter, Ctrl+X).
 
 Make the script executable:
 
-chmod +x ~/print-label
+> chmod +x ~/print-label
 
 Now you can print any compatible image simply by running: ./print-label /path/to/your/image.png
