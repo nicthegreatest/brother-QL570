@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# ==============================================================================
+# Automated Print-Label Script for Brother QL-570
+# Version: 2.0
+# Features:
+#   - Automatically detects and s SVG files to print-ready PNGs.
+#   - Prints PNG files directly.
+#   - Uses a temporary file for conversions, which is cleaned up automatically.
+# ==============================================================================
+
+# --- Configuration ---
+# The vendor and product ID of your printer, found with `lsusb`.
+PRINTER_ID="04f9:2028" 
+# The pixel dimensions your printer expects for the label size.
+# For 62x100mm, this is 696x1109.
+LABEL_DIMENSIONS="696x1109"
+# The label code for the `brother_ql` tool.
+LABEL_SIZE_CODE="62x100"
+
+# --- Script Logic ---
+
+# 1. Check if a filename was provided as an argument.
+if [ -z "$1" ]; then
+  echo "Error: You must provide a path to an image file (PNG or SVG)."
+  echo "Usage: ./print-label <path_to_image>"
+  exit 1
+fi
+
+INPUT_FILE="$1"
+# This will be the final file that gets sent to the printer.
+FILE_TO_PRINT=""
+
+# 2. Create a temporary file that will be deleted when the script exits.
+# This is where the converted SVG will be stored.
+TEMP_PNG_FILE=$(mktemp /tmp/print-label-XXXXXX.png) 
+trap 'rm -f "$TEMP_PNG_FILE"' EXIT 
+
+# 3. Check if the input file is an SVG (case-insensitive check).
+if [[ "${INPUT_FILE,,}" == *.svg ]]; then
+  echo "SVG file detected. Converting to a print-ready PNG..."
+  
+  # Use ImageMagick's `magick` to handle the SVG.
+  # It resizes the SVG to fit, adds a white background, and sets the
+  # final canvas size to the exact dimensions the printer needs.
+  magick "$INPUT_FILE" -resize "$LABEL_DIMENSIONS" -background white -gravity center -extent "$LABEL_DIMENSIONS" "$TEMP_PNG_FILE"
+  
+  # Check if the conversion was successful.
+  if [ $? -ne 0 ]; then
+    echo "Error: ImageMagick SVG conversion failed."
+    exit 1
+  fi
+  
+  # Set the file to print to our newly created temporary PNG.
+  FILE_TO_PRINT="$TEMP_PNG_FILE"
+else
+  # If it's not an SVG, we assume it's already a print-ready PNG.
+  FILE_TO_PRINT="$INPUT_FILE"
+fi
+
+# 4. Print the final image file.
+echo "Sending '$FILE_TO_PRINT' to the printer..."
+brother_ql --backend pyusb --model QL-570 --printer "usb://$PRINTER_ID" print -l "$LABEL_SIZE_CODE" "$FILE_TO_PRINT"
+
+# The `trap` command will automatically delete the temporary file now.
+echo "Done."
+
+
