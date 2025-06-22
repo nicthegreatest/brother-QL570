@@ -8,25 +8,17 @@ First, we need to install a few essential packages from the Fedora repositories 
 
 Open a terminal and run the following command:
 
-sudo dnf install python3-pip python3-devel libusb1-devel ImageMagick
-
-python3-pip: The package installer for Python, used to get the driver.
-
-python3-devel: Development files needed to build some of the driver's components.
-
-libusb1-devel: Development files for the library that communicates with USB devices.
-
-ImageMagick: A powerful tool for creating and manipulating images, which we'll use to create test labels.
+> sudo dnf install python3-pip python3-devel libusb1-devel ImageMagick
 
 ## Step 2: Install the Open-Source brother_ql Driver
 Next, use pip to install the open-source Python driver. The --user flag installs it into your home directory, which avoids needing sudo for this step.
 
-pip install --user --upgrade brother_ql
+> pip install --user --upgrade brother_ql
 
-Step 3: Find Your Printer's USB ID
+## Step 3: Find Your Printer's USB ID
 The system needs a unique way to identify the printer. Plug in the printer and turn it on, then run:
 
-lsusb | grep Brother
+> lsusb | grep Brother
 
 You will see a line similar to this:
 > Bus 001 Device 008: ID 04f9:2028 Brother Industries, Ltd QL-570 Label Printer
@@ -67,20 +59,20 @@ You are now ready to print directly.
 
 Create a correctly-sized test image. For a 62x100mm label, the driver expects an image that is exactly 696x1109 pixels. Use ImageMagick to create one:
 
-convert -size 696x1109 xc:white -fill black -draw "rectangle 100,100 596,300" ~/test_label.png
+> magick -size 696x1109 xc:white -fill black -draw "rectangle 100,100 596,300" ~/test_label.png
 
 Run the print command. Use the idVendor and idProduct from Step 3.
 
-brother_ql --backend pyusb --model QL-570 --printer usb://04f9:2028 print -l 62x100 ~/test_label.png
+> brother_ql --backend pyusb --model QL-570 --printer usb://04f9:2028 print -l 62x100 ~/test_label.png
 
 A label with a black rectangle should now print. You can ignore any post-print warnings like Insufficient amount of data received as long as the label prints successfully.
 
-(Optional) Step 8: Create a Convenience Script
+## (Optional) Step 8: Create a Convenience Script
 To make printing easier, you can create a simple script.
 
 Create a file named print-label:
 
-nano ~/print-label
+> nano ~/print-label
 
 Paste the print-label file or download directly and make your own changes.
 
