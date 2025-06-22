@@ -1,5 +1,5 @@
 # Brother QL-570 Setup Guide for Fedora Linux
-This guide provides a complete, reliable method for setting up a Brother QL-570 label printer on a modern Fedora Linux system (like Fedora 42 and later).
+This guide provides a complete, reliable method for setting up a Brother QL-570 label printer (or really any other model) on a modern Fedora Linux system (like Fedora 42 and later).
 
 This method bypasses the official, outdated Brother drivers and uses a modern open-source tool to communicate directly with the printer. This solves the common issue where CUPS reports a print job as "Completed," but nothing actually prints.
 
