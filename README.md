@@ -45,14 +45,16 @@ Now that the device will belong to the lp group, you must add your user account 
 
 > sudo usermod -a -G lp <your_username>
 
-(Replace <your_username> with your actual username)
-
 ## Step 6: Apply Changes and Reboot
 To ensure all permission changes take full effect system-wide, the most reliable method is to perform a full reboot.
 
-reboot
+> reboot
 
-After rebooting, log back in. You can verify you are in the lp group by running the groups command. You should see lp in the list.
+After rebooting, log back in and run:
+
+> groups
+
+You should see lp in the list
 
 ## Step 7: Test Printing from the Command Line
 You are now ready to print directly.
