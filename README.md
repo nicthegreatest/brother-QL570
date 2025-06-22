@@ -74,7 +74,7 @@ Create a file named print-label:
 
 > nano ~/print-label
 
-Paste the print-label file or download directly and make your own changes.
+Paste or download here: https://github.com/nicthegreatest/brother-QL570/blob/main/print-label
 
 Save and exit (Ctrl+O, Enter, Ctrl+X).
 
